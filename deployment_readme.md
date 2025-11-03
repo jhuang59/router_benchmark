@@ -1,12 +1,67 @@
 # Router Ping Benchmark - Deployment Guide
 
 ## Overview
-This containerized solution benchmarks two routers by pinging internet targets through each router's gateway and interface. It runs continuously, summarizing results and storing them for analysis.
+This distributed system benchmarks router performance across multiple locations with centralized visualization.
+
+**Architecture:**
+- **Stage 1 (Clients)**: Benchmark clients deployed on machines with multiple network interfaces
+- **Stage 2 (Server)**: Center server that collects logs and provides web-based visualization
 
 ## Prerequisites
-- Upper computer(ubuntu) with two network interfaces (one per router)
-- Docker and Docker Compose installed
-- Both routers providing internet access
+- **For Clients**: Ubuntu computer with two network interfaces (one per router)
+- **For Server**: Any machine (cloud or local) with Docker installed
+- Docker and Docker Compose installed on all machines
+- Network connectivity between clients and server
+
+## Deployment Overview
+
+**Recommended deployment order:**
+1. Deploy center server first (Stage 2)
+2. Configure and deploy benchmark clients (Stage 1)
+3. Access the web dashboard to view results
+
+---
+
+## Stage 2: Deploy Center Server
+
+### 1. Prepare Server Machine
+```bash
+# Create project directory
+mkdir -p ~/router-benchmark-center
+cd ~/router-benchmark-center
+
+# Copy center_server files to this directory
+# You need: center_server/ directory with all its contents
+```
+
+### 2. Deploy Center Server
+```bash
+cd ~/router-benchmark-center/center_server
+docker-compose up -d
+```
+
+### 3. Verify Server is Running
+```bash
+# Check container status
+docker-compose ps
+
+# Check logs
+docker-compose logs -f
+
+# Test API endpoint
+curl http://localhost:5000/health
+```
+
+### 4. Access Dashboard
+Open browser: `http://YOUR_SERVER_IP:5000`
+
+**Note:** Make sure port 5000 is open in your firewall and accessible from client machines.
+
+See [center_server/README.md](center_server/README.md) for detailed server documentation.
+
+---
+
+## Stage 1: Deploy Benchmark Clients
 
 ## Quick Start
 
@@ -53,9 +108,12 @@ Edit `config.json` to match your setup:
   "ping_target": "8.8.8.8",       // Target to ping (Google DNS)
   "ping_count": 20,                // Number of pings per test
   "test_interval_seconds": 300,    // Time between tests (5 minutes)
-  "results_dir": "/app/results"
+  "results_dir": "/app/results",
+  "center_server_url": "http://YOUR_CENTER_SERVER_IP:5000"  // Center server URL
 }
 ```
+
+**Important:** Replace `YOUR_CENTER_SERVER_IP` with the actual IP address of your center server.
 
 ### 6. Deploy the Container
 ```bash
@@ -82,6 +140,7 @@ docker-compose logs --tail=100
 | `ping_count` | Number of pings per test | 20 |
 | `test_interval_seconds` | Seconds between tests | 300 (5 min) |
 | `results_dir` | Results storage directory | /app/results |
+| `center_server_url` | Center server URL for log backflow | (empty - optional) |
 
 **Alternative Ping Targets:**
 - `1.1.1.1` - Cloudflare DNS

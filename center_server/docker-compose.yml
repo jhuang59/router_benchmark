@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  center-server:
+    build: .
+    container_name: router-benchmark-center
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    environment:
+      - TZ=UTC
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

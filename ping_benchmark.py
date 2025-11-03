@@ -11,6 +11,8 @@ import statistics
 from datetime import datetime
 import os
 import re
+import urllib.request
+import urllib.error
 
 class PingBenchmark:
     def __init__(self, config_file='config.json'):
@@ -25,7 +27,8 @@ class PingBenchmark:
         self.ping_count = self.config.get('ping_count', 20)
         self.test_interval = self.config.get('test_interval_seconds', 300)
         self.results_dir = self.config.get('results_dir', '/app/results')
-        
+        self.center_server_url = self.config.get('center_server_url', '')
+
         # Create results directory
         os.makedirs(self.results_dir, exist_ok=True)
     
@@ -152,10 +155,13 @@ class PingBenchmark:
         
         # Print summary
         self.print_summary(benchmark_result)
-        
+
         # Save results
         self.save_results(benchmark_result)
-        
+
+        # Send to center server
+        self.send_to_center_server(benchmark_result)
+
         return benchmark_result
     
     def print_summary(self, result):
@@ -216,16 +222,43 @@ class PingBenchmark:
         """Save results to JSON file"""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"{self.results_dir}/benchmark_{timestamp}.json"
-        
+
         with open(filename, 'w') as f:
             json.dump(result, f, indent=2)
-        
+
         print(f"Results saved to: {filename}")
-        
+
         # Also append to a cumulative log
         log_file = f"{self.results_dir}/benchmark_log.jsonl"
         with open(log_file, 'a') as f:
             f.write(json.dumps(result) + '\n')
+
+    def send_to_center_server(self, result):
+        """Send results to center server"""
+        if not self.center_server_url:
+            return
+
+        try:
+            url = f"{self.center_server_url}/api/logs"
+            data = json.dumps(result).encode('utf-8')
+
+            req = urllib.request.Request(
+                url,
+                data=data,
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
+
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status == 200:
+                    print(f"Successfully sent data to center server: {url}")
+                else:
+                    print(f"Warning: Center server returned status {response.status}")
+
+        except urllib.error.URLError as e:
+            print(f"Warning: Failed to send data to center server: {e}")
+        except Exception as e:
+            print(f"Warning: Error sending to center server: {e}")
     
     def run_continuous(self):
         """Run benchmark continuously at specified interval"""

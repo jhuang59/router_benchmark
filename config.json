@@ -10,5 +10,6 @@
   "ping_target": "8.8.8.8",
   "ping_count": 20,
   "test_interval_seconds": 300,
-  "results_dir": "/app/results"
+  "results_dir": "/app/results",
+  "center_server_url": "http://CENTER_SERVER_IP:5000"
 }
