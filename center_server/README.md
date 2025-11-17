@@ -5,7 +5,9 @@ A simple web-based dashboard for collecting and visualizing router benchmark log
 ## Features
 
 - **Log Collection**: REST API endpoint to receive benchmark data from clients
+- **Client Monitoring**: Track active clients with heartbeat/keepalive mechanism
 - **Real-time Visualization**: Interactive charts showing packet loss % and latency over time
+- **Client List**: View all connected clients with online/offline status
 - **Simple Dashboard**: Clean web UI with stats cards and time-series charts
 - **Docker Deployment**: Easy deployment using Docker Compose
 - **Persistent Storage**: Data stored in JSONL format for easy analysis
@@ -43,6 +45,7 @@ http://YOUR_SERVER_IP:5000
 
 You'll see:
 - Live statistics for both routers
+- Active clients list with online/offline status
 - Packet loss % over time chart
 - Average latency over time chart
 - Auto-refresh every 30 seconds
@@ -110,14 +113,63 @@ Get summary statistics
 }
 ```
 
+### POST /api/heartbeat
+Receive heartbeat/keepalive from clients
+
+**Request Body:**
+```json
+{
+  "client_id": "client-001",
+  "hostname": "benchmark-host-1",
+  "router1_interface": "enp0s31f6",
+  "router2_interface": "enp8s0f0"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Heartbeat received"
+}
+```
+
+### GET /api/clients
+Get list of active clients with their status
+
+**Query Parameters:**
+- `timeout` (optional): Seconds to consider client offline (default: 120)
+
+**Response:**
+```json
+{
+  "clients": [
+    {
+      "client_id": "client-001",
+      "hostname": "benchmark-host-1",
+      "last_heartbeat": "2025-11-03T10:00:00",
+      "seconds_since_heartbeat": 15,
+      "status": "online",
+      "router1_interface": "enp0s31f6",
+      "router2_interface": "enp8s0f0"
+    }
+  ],
+  "total": 1,
+  "online": 1,
+  "offline": 0
+}
+```
+
 ### GET /health
 Health check endpoint
 
 ## Data Storage
 
-All benchmark data is stored in `/app/data/benchmark_data.jsonl` (inside the container).
+Data is stored in the `/app/data/` directory (inside the container):
+- **benchmark_data.jsonl**: All benchmark results (one JSON object per line)
+- **clients.json**: Registry of all clients and their last heartbeat times
 
-On the host, this maps to `./data/benchmark_data.jsonl` (relative to center_server directory).
+On the host, this maps to `./data/` (relative to center_server directory).
 
 ## Managing the Server
 
@@ -148,6 +200,13 @@ docker-compose restart
 - Total records collected
 - Latest packet loss % for each router (color-coded: green = 0%, yellow < 5%, red ≥ 5%)
 - Latest average latency for each router (color-coded: green < 50ms, yellow < 100ms, red ≥ 100ms)
+
+### Active Clients
+- Table showing all clients that have sent heartbeats
+- Client ID, hostname, and network interfaces
+- Online/offline status with color coding
+- Last seen time (e.g., "15s ago", "5m ago")
+- Clients are marked offline after 2 minutes without heartbeat
 
 ### Charts
 - **Packet Loss Over Time**: Line chart showing loss % for both routers

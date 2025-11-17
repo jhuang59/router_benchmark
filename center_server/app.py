@@ -7,7 +7,7 @@ Receives logs from benchmark clients and provides visualization
 from flask import Flask, request, jsonify, render_template
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 app = Flask(__name__)
@@ -16,6 +16,31 @@ app = Flask(__name__)
 DATA_DIR = Path('/app/data')
 DATA_DIR.mkdir(exist_ok=True)
 LOG_FILE = DATA_DIR / 'benchmark_data.jsonl'
+CLIENTS_FILE = DATA_DIR / 'clients.json'
+
+# In-memory client registry (last heartbeat times)
+clients_registry = {}
+
+def load_clients_registry():
+    """Load clients registry from file"""
+    global clients_registry
+    if CLIENTS_FILE.exists():
+        try:
+            with open(CLIENTS_FILE, 'r') as f:
+                clients_registry = json.load(f)
+        except Exception as e:
+            print(f"Error loading clients registry: {e}")
+            clients_registry = {}
+    else:
+        clients_registry = {}
+
+def save_clients_registry():
+    """Save clients registry to file"""
+    try:
+        with open(CLIENTS_FILE, 'w') as f:
+            json.dump(clients_registry, f, indent=2)
+    except Exception as e:
+        print(f"Error saving clients registry: {e}")
 
 @app.route('/')
 def index():
@@ -118,13 +143,93 @@ def health():
     """Health check endpoint"""
     return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
 
+@app.route('/api/heartbeat', methods=['POST'])
+def heartbeat():
+    """
+    Receive heartbeat from clients
+    Expected format: {client_id: "...", hostname: "...", ...}
+    """
+    try:
+        data = request.get_json()
+
+        if not data or 'client_id' not in data:
+            return jsonify({'error': 'client_id is required'}), 400
+
+        client_id = data['client_id']
+
+        # Update client registry
+        clients_registry[client_id] = {
+            'client_id': client_id,
+            'hostname': data.get('hostname', 'unknown'),
+            'last_heartbeat': datetime.now().isoformat(),
+            'router1_interface': data.get('router1_interface'),
+            'router2_interface': data.get('router2_interface'),
+        }
+
+        # Save to disk periodically (every heartbeat to keep it simple)
+        save_clients_registry()
+
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Heartbeat from client: {client_id}")
+
+        return jsonify({'status': 'success', 'message': 'Heartbeat received'}), 200
+
+    except Exception as e:
+        print(f"Error receiving heartbeat: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/clients', methods=['GET'])
+def get_clients():
+    """
+    Get list of active clients
+    Query params:
+    - timeout: seconds to consider client offline (default: 120)
+    """
+    try:
+        timeout_seconds = int(request.args.get('timeout', 120))
+        now = datetime.now()
+
+        clients_list = []
+        for client_id, client_info in clients_registry.items():
+            last_heartbeat = datetime.fromisoformat(client_info['last_heartbeat'])
+            time_since_heartbeat = (now - last_heartbeat).total_seconds()
+
+            client_data = {
+                'client_id': client_id,
+                'hostname': client_info.get('hostname', 'unknown'),
+                'last_heartbeat': client_info['last_heartbeat'],
+                'seconds_since_heartbeat': int(time_since_heartbeat),
+                'status': 'online' if time_since_heartbeat < timeout_seconds else 'offline',
+                'router1_interface': client_info.get('router1_interface'),
+                'router2_interface': client_info.get('router2_interface'),
+            }
+            clients_list.append(client_data)
+
+        # Sort by last heartbeat (most recent first)
+        clients_list.sort(key=lambda x: x['last_heartbeat'], reverse=True)
+
+        return jsonify({
+            'clients': clients_list,
+            'total': len(clients_list),
+            'online': sum(1 for c in clients_list if c['status'] == 'online'),
+            'offline': sum(1 for c in clients_list if c['status'] == 'offline')
+        })
+
+    except Exception as e:
+        print(f"Error getting clients: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     print("="*60)
     print("Router Benchmark Center Server")
     print("="*60)
     print(f"Data directory: {DATA_DIR}")
     print(f"Log file: {LOG_FILE}")
+    print(f"Clients file: {CLIENTS_FILE}")
     print("Starting server on 0.0.0.0:5000")
     print("="*60)
+
+    # Load existing clients registry
+    load_clients_registry()
+    print(f"Loaded {len(clients_registry)} client(s) from registry")
 
     app.run(host='0.0.0.0', port=5000, debug=False)

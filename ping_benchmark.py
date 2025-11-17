@@ -13,6 +13,8 @@ import os
 import re
 import urllib.request
 import urllib.error
+import threading
+import socket
 
 class PingBenchmark:
     def __init__(self, config_file='config.json'):
@@ -28,6 +30,12 @@ class PingBenchmark:
         self.test_interval = self.config.get('test_interval_seconds', 300)
         self.results_dir = self.config.get('results_dir', '/app/results')
         self.center_server_url = self.config.get('center_server_url', '')
+        self.heartbeat_interval = self.config.get('heartbeat_interval_seconds', 60)
+        self.client_id = self.config.get('client_id', socket.gethostname())
+
+        # Heartbeat thread control
+        self.heartbeat_running = False
+        self.heartbeat_thread = None
 
         # Create results directory
         os.makedirs(self.results_dir, exist_ok=True)
@@ -259,13 +267,77 @@ class PingBenchmark:
             print(f"Warning: Failed to send data to center server: {e}")
         except Exception as e:
             print(f"Warning: Error sending to center server: {e}")
+
+    def send_heartbeat(self):
+        """Send heartbeat signal to center server"""
+        if not self.center_server_url:
+            return
+
+        try:
+            url = f"{self.center_server_url}/api/heartbeat"
+            heartbeat_data = {
+                'client_id': self.client_id,
+                'hostname': socket.gethostname(),
+                'router1_interface': self.router1_iface,
+                'router2_interface': self.router2_iface,
+            }
+            data = json.dumps(heartbeat_data).encode('utf-8')
+
+            req = urllib.request.Request(
+                url,
+                data=data,
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
+
+            with urllib.request.urlopen(req, timeout=5) as response:
+                if response.status == 200:
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Heartbeat sent to center server")
+
+        except Exception as e:
+            print(f"Warning: Heartbeat failed: {e}")
+
+    def heartbeat_worker(self):
+        """Background worker that sends periodic heartbeats"""
+        print(f"Heartbeat worker started (interval: {self.heartbeat_interval}s)")
+
+        while self.heartbeat_running:
+            self.send_heartbeat()
+            time.sleep(self.heartbeat_interval)
+
+    def start_heartbeat(self):
+        """Start the heartbeat background thread"""
+        if not self.center_server_url:
+            print("No center server configured, heartbeat disabled")
+            return
+
+        if self.heartbeat_running:
+            return
+
+        self.heartbeat_running = True
+        self.heartbeat_thread = threading.Thread(target=self.heartbeat_worker, daemon=True)
+        self.heartbeat_thread.start()
+        print(f"Heartbeat started for client: {self.client_id}")
+
+    def stop_heartbeat(self):
+        """Stop the heartbeat background thread"""
+        if self.heartbeat_running:
+            self.heartbeat_running = False
+            if self.heartbeat_thread:
+                self.heartbeat_thread.join(timeout=2)
     
     def run_continuous(self):
         """Run benchmark continuously at specified interval"""
         print(f"Starting continuous benchmarking...")
+        print(f"Client ID: {self.client_id}")
         print(f"Test interval: {self.test_interval} seconds")
+        if self.center_server_url:
+            print(f"Heartbeat interval: {self.heartbeat_interval} seconds")
         print(f"Press Ctrl+C to stop\n")
-        
+
+        # Start heartbeat in background
+        self.start_heartbeat()
+
         try:
             while True:
                 self.run_benchmark()
@@ -273,6 +345,7 @@ class PingBenchmark:
                 time.sleep(self.test_interval)
         except KeyboardInterrupt:
             print("\n\nBenchmarking stopped by user")
+            self.stop_heartbeat()
 
 if __name__ == '__main__':
     benchmark = PingBenchmark()

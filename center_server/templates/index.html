@@ -134,6 +134,71 @@
             font-size: 12px;
             margin-top: 10px;
         }
+
+        .clients-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .clients-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .clients-title {
+            color: #333;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .clients-count {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .clients-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .clients-table th {
+            text-align: left;
+            padding: 12px;
+            background: #f9fafb;
+            color: #666;
+            font-size: 13px;
+            font-weight: 600;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .clients-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+        }
+
+        .clients-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .client-status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .no-clients {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
     </style>
 </head>
 <body>
@@ -160,6 +225,16 @@
             <div class="stat-card">
                 <div class="stat-label">Router 2 - Avg Latency</div>
                 <div class="stat-value" id="router2-latency">-</div>
+            </div>
+        </div>
+
+        <div class="clients-section">
+            <div class="clients-header">
+                <div class="clients-title">Active Clients</div>
+                <div class="clients-count" id="clients-count">-</div>
+            </div>
+            <div id="clients-table-container">
+                <div class="no-clients">Loading clients...</div>
             </div>
         </div>
 
@@ -307,11 +382,90 @@
                     await updateStats();
                 }
 
+                // Update clients list
+                await updateClients();
+
                 document.getElementById('lastUpdate').textContent =
                     `Last updated: ${new Date().toLocaleString()}`;
 
             } catch (error) {
                 console.error('Error fetching data:', error);
+            }
+        }
+
+        // Update clients list
+        async function updateClients() {
+            try {
+                const response = await fetch('/api/clients');
+                const result = await response.json();
+
+                const container = document.getElementById('clients-table-container');
+                const countEl = document.getElementById('clients-count');
+
+                if (result.clients && result.clients.length > 0) {
+                    countEl.textContent = `${result.online} online, ${result.offline} offline (${result.total} total)`;
+
+                    let tableHTML = `
+                        <table class="clients-table">
+                            <thead>
+                                <tr>
+                                    <th>Client ID</th>
+                                    <th>Hostname</th>
+                                    <th>Status</th>
+                                    <th>Router 1 Interface</th>
+                                    <th>Router 2 Interface</th>
+                                    <th>Last Seen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    result.clients.forEach(client => {
+                        const statusClass = client.status === 'online' ? 'status online' : 'status offline';
+                        const lastSeen = formatTimeSince(client.seconds_since_heartbeat);
+
+                        tableHTML += `
+                            <tr>
+                                <td><strong>${client.client_id}</strong></td>
+                                <td>${client.hostname}</td>
+                                <td><span class="client-status-badge ${statusClass}">${client.status}</span></td>
+                                <td>${client.router1_interface || '-'}</td>
+                                <td>${client.router2_interface || '-'}</td>
+                                <td>${lastSeen}</td>
+                            </tr>
+                        `;
+                    });
+
+                    tableHTML += `
+                            </tbody>
+                        </table>
+                    `;
+
+                    container.innerHTML = tableHTML;
+                } else {
+                    countEl.textContent = '0 clients';
+                    container.innerHTML = '<div class="no-clients">No clients connected yet</div>';
+                }
+
+            } catch (error) {
+                console.error('Error fetching clients:', error);
+                document.getElementById('clients-count').textContent = 'Error loading clients';
+            }
+        }
+
+        // Format time since last heartbeat
+        function formatTimeSince(seconds) {
+            if (seconds < 60) {
+                return `${seconds}s ago`;
+            } else if (seconds < 3600) {
+                const mins = Math.floor(seconds / 60);
+                return `${mins}m ago`;
+            } else if (seconds < 86400) {
+                const hours = Math.floor(seconds / 3600);
+                return `${hours}h ago`;
+            } else {
+                const days = Math.floor(seconds / 86400);
+                return `${days}d ago`;
             }
         }
 
