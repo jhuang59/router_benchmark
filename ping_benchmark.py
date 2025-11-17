@@ -157,6 +157,8 @@ class PingBenchmark:
         # Combine results
         benchmark_result = {
             'timestamp': datetime.now().isoformat(),
+            'client_id': self.client_id,
+            'hostname': socket.gethostname(),
             'router1': router1_result,
             'router2': router2_result
         }

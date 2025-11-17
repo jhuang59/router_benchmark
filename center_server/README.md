@@ -6,11 +6,12 @@ A simple web-based dashboard for collecting and visualizing router benchmark log
 
 - **Log Collection**: REST API endpoint to receive benchmark data from clients
 - **Client Monitoring**: Track active clients with heartbeat/keepalive mechanism
+- **Per-Client Filtering**: View data from specific client or all clients combined
 - **Real-time Visualization**: Interactive charts showing packet loss % and latency over time
 - **Client List**: View all connected clients with online/offline status
 - **Simple Dashboard**: Clean web UI with stats cards and time-series charts
 - **Docker Deployment**: Easy deployment using Docker Compose
-- **Persistent Storage**: Data stored in JSONL format for easy analysis
+- **Persistent Storage**: Data stored in JSONL format with client identification
 
 ## Quick Start
 
@@ -46,9 +47,18 @@ http://YOUR_SERVER_IP:5000
 You'll see:
 - Live statistics for both routers
 - Active clients list with online/offline status
-- Packet loss % over time chart
-- Average latency over time chart
+- Client filter dropdown to view specific client or all clients
+- Packet loss % over time chart (per-client or aggregated)
+- Average latency over time chart (per-client or aggregated)
 - Auto-refresh every 30 seconds
+
+### 4. Filter by Client (Optional)
+
+Use the "View Client" dropdown to:
+- View **All Clients**: See aggregated data from all clients
+- View **Specific Client**: Filter to show only one client's performance data
+
+Charts automatically update to show selected client's data.
 
 ## API Endpoints
 
@@ -87,6 +97,7 @@ Get benchmark data for visualization
 
 **Query Parameters:**
 - `limit` (optional): Number of recent records to return (default: 100)
+- `client_id` (optional): Filter by specific client (default: all clients)
 
 **Response:**
 ```json
@@ -96,8 +107,15 @@ Get benchmark data for visualization
 }
 ```
 
+**Examples:**
+- All clients: `GET /api/data?limit=100`
+- Specific client: `GET /api/data?limit=100&client_id=office-client-1`
+
 ### GET /api/stats
 Get summary statistics
+
+**Query Parameters:**
+- `client_id` (optional): Filter by specific client (default: all clients)
 
 **Response:**
 ```json
@@ -105,6 +123,8 @@ Get summary statistics
   "stats": {
     "total_records": 150,
     "latest_timestamp": "2025-11-03T10:00:00",
+    "client_id": "office-client-1",
+    "hostname": "benchmark-host-1",
     "router1_latest_loss": 0.0,
     "router2_latest_loss": 0.0,
     "router1_latest_avg_ms": 15.5,
@@ -213,9 +233,13 @@ docker-compose restart
 - **Latency Over Time**: Line chart showing average latency for both routers
 
 ### Controls
-- Time range selector (Last 50/100/200/500 records)
-- Manual refresh button
-- Auto-refresh every 30 seconds
+- **Client Filter**: Dropdown to view specific client or all clients
+  - Select "All Clients" to see aggregated data
+  - Select specific client to see only that client's data
+  - Charts and stats update automatically when selection changes
+- **Time Range**: Selector for number of records (Last 50/100/200/500 records)
+- **Manual Refresh**: Button to update dashboard immediately
+- **Auto-refresh**: Updates every 30 seconds automatically
 
 ## Network Configuration
 

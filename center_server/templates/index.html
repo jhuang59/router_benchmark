@@ -239,7 +239,12 @@
         </div>
 
         <div class="controls">
-            <label for="timeRange">Time Range:</label>
+            <label for="clientFilter">View Client:</label>
+            <select id="clientFilter">
+                <option value="all" selected>All Clients</option>
+            </select>
+
+            <label for="timeRange" style="margin-left: 20px;">Time Range:</label>
             <select id="timeRange">
                 <option value="50">Last 50 records</option>
                 <option value="100" selected>Last 100 records</option>
@@ -374,15 +379,26 @@
         async function refreshData() {
             try {
                 const limit = document.getElementById('timeRange').value;
-                const response = await fetch(`/api/data?limit=${limit}`);
+                const clientId = document.getElementById('clientFilter').value;
+
+                // Fetch data with client filter
+                let url = `/api/data?limit=${limit}`;
+                if (clientId && clientId !== 'all') {
+                    url += `&client_id=${clientId}`;
+                }
+
+                const response = await fetch(url);
                 const result = await response.json();
 
                 if (result.data && result.data.length > 0) {
-                    updateCharts(result.data);
-                    await updateStats();
+                    updateCharts(result.data, clientId);
+                    await updateStats(clientId);
+                } else {
+                    // Clear charts if no data
+                    clearCharts();
                 }
 
-                // Update clients list
+                // Update clients list and selector
                 await updateClients();
 
                 document.getElementById('lastUpdate').textContent =
@@ -401,6 +417,22 @@
 
                 const container = document.getElementById('clients-table-container');
                 const countEl = document.getElementById('clients-count');
+                const clientFilter = document.getElementById('clientFilter');
+                const currentSelection = clientFilter.value;
+
+                // Update client filter dropdown
+                if (result.clients && result.clients.length > 0) {
+                    let optionsHTML = '<option value="all">All Clients</option>';
+                    result.clients.forEach(client => {
+                        optionsHTML += `<option value="${client.client_id}">${client.client_id} (${client.hostname})</option>`;
+                    });
+                    clientFilter.innerHTML = optionsHTML;
+
+                    // Restore selection if still valid
+                    if (currentSelection && Array.from(clientFilter.options).some(opt => opt.value === currentSelection)) {
+                        clientFilter.value = currentSelection;
+                    }
+                }
 
                 if (result.clients && result.clients.length > 0) {
                     countEl.textContent = `${result.online} online, ${result.offline} offline (${result.total} total)`;
@@ -470,7 +502,7 @@
         }
 
         // Update charts with new data
-        function updateCharts(data) {
+        function updateCharts(data, clientId) {
             const labels = [];
             const router1Loss = [];
             const router2Loss = [];
@@ -487,6 +519,13 @@
                 router2Latency.push(record.router2?.avg_ms ?? null);
             });
 
+            // Update chart titles
+            const clientInfo = clientId && clientId !== 'all' ? ` - ${clientId}` : ' - All Clients';
+            document.querySelector('#lossChart').closest('.chart-container').querySelector('.chart-title').textContent =
+                `Packet Loss % Over Time${clientInfo}`;
+            document.querySelector('#latencyChart').closest('.chart-container').querySelector('.chart-title').textContent =
+                `Average Latency (ms) Over Time${clientInfo}`;
+
             // Update loss chart
             lossChart.data.labels = labels;
             lossChart.data.datasets[0].data = router1Loss;
@@ -500,10 +539,28 @@
             latencyChart.update();
         }
 
+        // Clear charts when no data
+        function clearCharts() {
+            lossChart.data.labels = [];
+            lossChart.data.datasets[0].data = [];
+            lossChart.data.datasets[1].data = [];
+            lossChart.update();
+
+            latencyChart.data.labels = [];
+            latencyChart.data.datasets[0].data = [];
+            latencyChart.data.datasets[1].data = [];
+            latencyChart.update();
+        }
+
         // Update statistics cards
-        async function updateStats() {
+        async function updateStats(clientId) {
             try {
-                const response = await fetch('/api/stats');
+                let url = '/api/stats';
+                if (clientId && clientId !== 'all') {
+                    url += `?client_id=${clientId}`;
+                }
+
+                const response = await fetch(url);
                 const result = await response.json();
                 const stats = result.stats;
 
@@ -575,7 +632,8 @@
             // Auto-refresh every 30 seconds
             setInterval(refreshData, 30000);
 
-            // Update when time range changes
+            // Update when filters change
+            document.getElementById('clientFilter').addEventListener('change', refreshData);
             document.getElementById('timeRange').addEventListener('change', refreshData);
         });
     </script>

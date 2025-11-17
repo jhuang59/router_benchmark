@@ -80,10 +80,11 @@ def get_data():
     Get benchmark data for visualization
     Optional query params:
     - limit: number of recent records (default: 100)
-    - hours: filter data from last N hours
+    - client_id: filter by specific client (optional, default: all clients)
     """
     try:
         limit = int(request.args.get('limit', 100))
+        client_id_filter = request.args.get('client_id', None)
 
         if not LOG_FILE.exists():
             return jsonify({'data': []})
@@ -94,6 +95,10 @@ def get_data():
             for line in f:
                 if line.strip():
                     logs.append(json.loads(line))
+
+        # Filter by client_id if specified
+        if client_id_filter and client_id_filter != 'all':
+            logs = [log for log in logs if log.get('client_id') == client_id_filter]
 
         # Return most recent logs
         recent_logs = logs[-limit:] if len(logs) > limit else logs
@@ -106,8 +111,14 @@ def get_data():
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
-    """Get summary statistics"""
+    """
+    Get summary statistics
+    Optional query params:
+    - client_id: filter by specific client (optional, default: all clients)
+    """
     try:
+        client_id_filter = request.args.get('client_id', None)
+
         if not LOG_FILE.exists():
             return jsonify({'stats': {}})
 
@@ -121,11 +132,20 @@ def get_stats():
         if not logs:
             return jsonify({'stats': {}})
 
+        # Filter by client_id if specified
+        if client_id_filter and client_id_filter != 'all':
+            logs = [log for log in logs if log.get('client_id') == client_id_filter]
+
+        if not logs:
+            return jsonify({'stats': {}})
+
         latest = logs[-1]
 
         stats = {
             'total_records': len(logs),
             'latest_timestamp': latest.get('timestamp'),
+            'client_id': latest.get('client_id'),
+            'hostname': latest.get('hostname'),
             'router1_latest_loss': latest.get('router1', {}).get('packet_loss_pct'),
             'router2_latest_loss': latest.get('router2', {}).get('packet_loss_pct'),
             'router1_latest_avg_ms': latest.get('router1', {}).get('avg_ms'),

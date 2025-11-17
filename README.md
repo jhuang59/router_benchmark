@@ -74,6 +74,7 @@ docker-compose up -d
 - REST API for log collection
 - Client monitoring with heartbeat tracking
 - Active clients list showing online/offline status
+- **Per-client data filtering**: View specific client or all clients
 - Web-based dashboard
 - Real-time visualization with Chart.js
 - Time-series charts for packet loss and latency
