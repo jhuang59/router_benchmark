@@ -1,6 +1,7 @@
 # Router Benchmark
 
 A distributed system for benchmarking router performance across multiple locations with centralized visualization.
+![img_v3_02sb_e11c695f-972b-42df-aeec-1226729d3deg](https://github.com/user-attachments/assets/158a64e6-0030-4b34-98a3-5e18c2688ce7)
 
 ## Architecture
 
