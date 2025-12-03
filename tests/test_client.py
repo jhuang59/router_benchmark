@@ -55,6 +55,7 @@ class TestConfiguration:
         config_data = {
             "router1": {"gateway": "192.168.1.1", "interface": "eth0"},
             "router2": {"gateway": "192.168.2.1", "interface": "eth1"},
+            "results_dir": str(tmp_path / "results"),
             "client_id": ""
         }
         config_file.write_text(json.dumps(config_data))
@@ -69,7 +70,8 @@ class TestConfiguration:
         config_file = tmp_path / "config.json"
         config_data = {
             "router1": {"gateway": "192.168.1.1", "interface": "eth0"},
-            "router2": {"gateway": "192.168.2.1", "interface": "eth1"}
+            "router2": {"gateway": "192.168.2.1", "interface": "eth1"},
+            "results_dir": str(tmp_path / "results")
         }
         config_file.write_text(json.dumps(config_data))
 
@@ -83,6 +85,7 @@ class TestConfiguration:
         config_data = {
             "router1": {"gateway": "192.168.1.1", "interface": "eth0"},
             "router2": {"gateway": "192.168.2.1", "interface": "eth1"},
+            "results_dir": str(tmp_path / "results"),
             "client_id": "my-custom-client"
         }
         config_file.write_text(json.dumps(config_data))
@@ -96,7 +99,8 @@ class TestConfiguration:
         config_file = tmp_path / "config.json"
         config_data = {
             "router1": {"gateway": "192.168.1.1", "interface": "eth0"},
-            "router2": {"gateway": "192.168.2.1", "interface": "eth1"}
+            "router2": {"gateway": "192.168.2.1", "interface": "eth1"},
+            "results_dir": str(tmp_path / "results")
         }
         config_file.write_text(json.dumps(config_data))
 
@@ -109,7 +113,8 @@ class TestConfiguration:
         config_file = tmp_path / "config.json"
         config_data = {
             "router1": {"gateway": "192.168.1.1", "interface": "eth0"},
-            "router2": {"gateway": "192.168.2.1", "interface": "eth1"}
+            "router2": {"gateway": "192.168.2.1", "interface": "eth1"},
+            "results_dir": str(tmp_path / "results")
         }
         config_file.write_text(json.dumps(config_data))
 
@@ -128,6 +133,7 @@ class TestHeartbeat:
         config_data = {
             "router1": {"gateway": "192.168.1.1", "interface": "eth0"},
             "router2": {"gateway": "192.168.2.1", "interface": "eth1"},
+            "results_dir": str(tmp_path / "results"),
             "center_server_url": "http://localhost:5000",
             "heartbeat_interval_seconds": 1,
             "client_id": "test-client"
