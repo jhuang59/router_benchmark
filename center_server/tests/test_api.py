@@ -17,10 +17,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     """Create a test client with temporary data directory"""
-    # Import app after patching paths
+    # Set environment variable BEFORE importing app
+    monkeypatch.setenv('DATA_DIR', str(tmp_path))
+
+    # Import app after setting environment
     import app as app_module
 
-    # Patch paths before importing app
+    # Verify paths were set correctly
     monkeypatch.setattr(app_module, 'DATA_DIR', tmp_path)
     monkeypatch.setattr(app_module, 'LOG_FILE', tmp_path / 'benchmark_data.jsonl')
     monkeypatch.setattr(app_module, 'CLIENTS_FILE', tmp_path / 'clients.json')
