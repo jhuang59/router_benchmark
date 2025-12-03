@@ -12,9 +12,9 @@ from pathlib import Path
 
 app = Flask(__name__)
 
-# Data directory
-DATA_DIR = Path('/app/data')
-DATA_DIR.mkdir(exist_ok=True)
+# Data directory (configurable via environment variable for testing)
+DATA_DIR = Path(os.environ.get('DATA_DIR', '/app/data'))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = DATA_DIR / 'benchmark_data.jsonl'
 CLIENTS_FILE = DATA_DIR / 'clients.json'
 
