@@ -1,0 +1,185 @@
+{
+  "version": "1.0",
+  "description": "Whitelisted commands for remote execution on benchmark clients",
+  "last_updated": "2025-12-07",
+  "commands": {
+    "system_info": {
+      "cmd": "uname -a",
+      "description": "Get system kernel and OS information",
+      "category": "system",
+      "params": [],
+      "timeout": 10
+    },
+    "hostname": {
+      "cmd": "hostname",
+      "description": "Get the machine hostname",
+      "category": "system",
+      "params": [],
+      "timeout": 5
+    },
+    "uptime": {
+      "cmd": "uptime",
+      "description": "Show system uptime and load averages",
+      "category": "system",
+      "params": [],
+      "timeout": 5
+    },
+    "disk_usage": {
+      "cmd": "df -h",
+      "description": "Show disk usage in human-readable format",
+      "category": "system",
+      "params": [],
+      "timeout": 10
+    },
+    "memory_info": {
+      "cmd": "free -m",
+      "description": "Show memory usage in megabytes",
+      "category": "system",
+      "params": [],
+      "timeout": 10
+    },
+    "cpu_info": {
+      "cmd": "cat /proc/cpuinfo | head -30",
+      "description": "Show CPU information (first 30 lines)",
+      "category": "system",
+      "params": [],
+      "timeout": 10
+    },
+    "process_list": {
+      "cmd": "ps aux --sort=-%mem | head -20",
+      "description": "Show top 20 processes by memory usage",
+      "category": "system",
+      "params": [],
+      "timeout": 15
+    },
+    "network_interfaces": {
+      "cmd": "ip addr show",
+      "description": "List all network interfaces and their IP addresses",
+      "category": "network",
+      "params": [],
+      "timeout": 10
+    },
+    "routing_table": {
+      "cmd": "ip route show",
+      "description": "Show the routing table",
+      "category": "network",
+      "params": [],
+      "timeout": 10
+    },
+    "dns_config": {
+      "cmd": "cat /etc/resolv.conf",
+      "description": "Show DNS resolver configuration",
+      "category": "network",
+      "params": [],
+      "timeout": 5
+    },
+    "network_stats": {
+      "cmd": "netstat -s | head -50",
+      "description": "Show network statistics summary",
+      "category": "network",
+      "params": [],
+      "timeout": 15
+    },
+    "ping_test": {
+      "cmd": "ping -c {count} -W 2 {target}",
+      "description": "Ping a target host",
+      "category": "network",
+      "params": ["target", "count"],
+      "param_validators": {
+        "target": {
+          "type": "ip",
+          "description": "Target IP address to ping"
+        },
+        "count": {
+          "type": "integer",
+          "min": 1,
+          "max": 10,
+          "description": "Number of ping packets (1-10)"
+        }
+      },
+      "timeout": 30
+    },
+    "traceroute": {
+      "cmd": "traceroute -m 15 -w 2 {target}",
+      "description": "Trace route to a target host (max 15 hops)",
+      "category": "network",
+      "params": ["target"],
+      "param_validators": {
+        "target": {
+          "type": "ip",
+          "description": "Target IP address to trace"
+        }
+      },
+      "timeout": 60
+    },
+    "interface_stats": {
+      "cmd": "ip -s link show {interface}",
+      "description": "Show statistics for a specific network interface",
+      "category": "network",
+      "params": ["interface"],
+      "param_validators": {
+        "interface": {
+          "type": "hostname",
+          "description": "Network interface name (e.g., eth0)"
+        }
+      },
+      "timeout": 10
+    },
+    "date_time": {
+      "cmd": "date && timedatectl status",
+      "description": "Show current date, time, and timezone",
+      "category": "system",
+      "params": [],
+      "timeout": 10
+    },
+    "docker_ps": {
+      "cmd": "docker ps --format 'table {{.ID}}\\t{{.Image}}\\t{{.Status}}\\t{{.Names}}'",
+      "description": "List running Docker containers",
+      "category": "docker",
+      "params": [],
+      "timeout": 15
+    },
+    "docker_stats": {
+      "cmd": "docker stats --no-stream --format 'table {{.Name}}\\t{{.CPUPerc}}\\t{{.MemUsage}}'",
+      "description": "Show Docker container resource usage",
+      "category": "docker",
+      "params": [],
+      "timeout": 30
+    },
+    "benchmark_status": {
+      "cmd": "ps aux | grep -E 'ping_benchmark|python.*benchmark' | grep -v grep",
+      "description": "Check if benchmark process is running",
+      "category": "benchmark",
+      "params": [],
+      "timeout": 10
+    },
+    "benchmark_logs": {
+      "cmd": "tail -50 /app/results/benchmark_log.jsonl 2>/dev/null || echo 'No benchmark logs found'",
+      "description": "Show last 50 lines of benchmark logs",
+      "category": "benchmark",
+      "params": [],
+      "timeout": 10
+    },
+    "disk_io_stats": {
+      "cmd": "iostat -x 1 2 | tail -20",
+      "description": "Show disk I/O statistics",
+      "category": "system",
+      "params": [],
+      "timeout": 15
+    },
+    "connection_count": {
+      "cmd": "ss -s",
+      "description": "Show socket statistics summary",
+      "category": "network",
+      "params": [],
+      "timeout": 10
+    },
+    "arp_table": {
+      "cmd": "ip neigh show",
+      "description": "Show ARP/neighbor table",
+      "category": "network",
+      "params": [],
+      "timeout": 10
+    }
+  }
+}

@@ -13,5 +13,9 @@
   "results_dir": "/app/results",
   "center_server_url": "http://CENTER_SERVER_IP:5000",
   "heartbeat_interval_seconds": 60,
-  "client_id": ""
+  "client_id": "",
+
+  "secret_key": "",
+  "remote_commands_enabled": true,
+  "command_poll_interval_seconds": 10
 }

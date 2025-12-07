@@ -2,19 +2,22 @@
 """
 Router Ping Benchmark Tool
 Pings internet through two different routers and summarizes performance
+Includes remote command execution with mutual authentication
 """
 
 import subprocess
 import json
 import time
 import statistics
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import re
 import urllib.request
 import urllib.error
 import threading
 import socket
+import hmac
+import hashlib
 
 class PingBenchmark:
     def __init__(self, config_file='config.json'):
@@ -34,9 +37,20 @@ class PingBenchmark:
         # Use hostname if client_id is empty or not specified
         self.client_id = self.config.get('client_id') or socket.gethostname()
 
+        # Authentication settings
+        self.secret_key = self.config.get('secret_key', '')
+        self.command_poll_interval = self.config.get('command_poll_interval_seconds', 10)
+        self.command_enabled = self.config.get('remote_commands_enabled', True)
+
         # Heartbeat thread control
         self.heartbeat_running = False
         self.heartbeat_thread = None
+
+        # Command polling thread control
+        self.command_polling_running = False
+        self.command_polling_thread = None
+        self.used_nonces = set()  # Track used nonces to prevent replay attacks
+        self.nonce_cleanup_time = datetime.now()
 
         # Create results directory
         os.makedirs(self.results_dir, exist_ok=True)
@@ -328,7 +342,264 @@ class PingBenchmark:
             self.heartbeat_running = False
             if self.heartbeat_thread:
                 self.heartbeat_thread.join(timeout=2)
-    
+
+    # =========================================================================
+    # Remote Command Execution (with mutual authentication)
+    # =========================================================================
+
+    def verify_command_signature(self, command_data):
+        """
+        Verify a command's HMAC signature and check for replay attacks
+        Returns (is_valid, error_message)
+        """
+        if not self.secret_key:
+            return False, "No secret key configured"
+
+        # Check required fields
+        required_fields = ['timestamp', 'nonce', 'signature']
+        for field in required_fields:
+            if field not in command_data:
+                return False, f"Missing required field: {field}"
+
+        # Extract signature
+        signature = command_data.get('signature')
+
+        # Create a copy without signature for verification
+        payload = {k: v for k, v in command_data.items() if k != 'signature'}
+
+        # Canonicalize and compute expected signature
+        canonical = json.dumps(payload, sort_keys=True, separators=(',', ':'))
+        expected_signature = hmac.new(
+            self.secret_key.encode('utf-8'),
+            canonical.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+
+        # Verify signature
+        if not hmac.compare_digest(signature, expected_signature):
+            return False, "Invalid signature - command rejected"
+
+        # Check timestamp (prevent replay of old commands)
+        try:
+            cmd_time = datetime.fromisoformat(command_data['timestamp'])
+            now = datetime.now()
+            time_diff = abs((now - cmd_time).total_seconds())
+
+            if time_diff > 300:  # 5 minutes tolerance
+                return False, f"Command expired (timestamp too old: {time_diff:.0f}s)"
+        except ValueError as e:
+            return False, f"Invalid timestamp format: {e}"
+
+        # Check nonce (prevent replay attacks)
+        nonce = command_data['nonce']
+
+        # Clean up old nonces periodically
+        if (datetime.now() - self.nonce_cleanup_time).total_seconds() > 600:
+            self.used_nonces.clear()
+            self.nonce_cleanup_time = datetime.now()
+
+        if nonce in self.used_nonces:
+            return False, "Nonce already used (replay attack detected)"
+
+        # Mark nonce as used
+        self.used_nonces.add(nonce)
+
+        return True, "Valid"
+
+    def execute_command(self, command_data):
+        """
+        Execute a verified command and return the result
+        """
+        command_string = command_data.get('command_string', '')
+        timeout = command_data.get('timeout', 60)
+        command_uuid = command_data.get('command_uuid', '')
+        command_id = command_data.get('command_id', '')
+
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] Executing command: {command_id}")
+        print(f"  Command: {command_string}")
+
+        start_time = time.time()
+
+        try:
+            result = subprocess.run(
+                command_string,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=timeout
+            )
+
+            duration = time.time() - start_time
+
+            return {
+                'command_uuid': command_uuid,
+                'command_id': command_id,
+                'exit_code': result.returncode,
+                'stdout': result.stdout,
+                'stderr': result.stderr,
+                'executed_at': datetime.now().isoformat(),
+                'duration_seconds': round(duration, 3)
+            }
+
+        except subprocess.TimeoutExpired:
+            duration = time.time() - start_time
+            return {
+                'command_uuid': command_uuid,
+                'command_id': command_id,
+                'exit_code': -1,
+                'stdout': '',
+                'stderr': f'Command timed out after {timeout} seconds',
+                'executed_at': datetime.now().isoformat(),
+                'duration_seconds': round(duration, 3),
+                'error': 'timeout'
+            }
+
+        except Exception as e:
+            duration = time.time() - start_time
+            return {
+                'command_uuid': command_uuid,
+                'command_id': command_id,
+                'exit_code': -1,
+                'stdout': '',
+                'stderr': str(e),
+                'executed_at': datetime.now().isoformat(),
+                'duration_seconds': round(duration, 3),
+                'error': str(e)
+            }
+
+    def submit_command_result(self, result):
+        """Submit command execution result to center server"""
+        if not self.center_server_url:
+            return
+
+        try:
+            url = f"{self.center_server_url}/api/commands/result"
+            data = json.dumps(result).encode('utf-8')
+
+            req = urllib.request.Request(
+                url,
+                data=data,
+                headers={
+                    'Content-Type': 'application/json',
+                    'X-Client-ID': self.client_id,
+                    'X-Client-API-Key': self.secret_key
+                },
+                method='POST'
+            )
+
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status == 200:
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Command result submitted")
+                else:
+                    print(f"Warning: Failed to submit result, status {response.status}")
+
+        except Exception as e:
+            print(f"Warning: Failed to submit command result: {e}")
+
+    def poll_for_commands(self):
+        """Poll the center server for pending commands"""
+        if not self.center_server_url or not self.secret_key:
+            return None
+
+        try:
+            url = f"{self.center_server_url}/api/commands/poll"
+
+            req = urllib.request.Request(
+                url,
+                headers={
+                    'X-Client-ID': self.client_id,
+                    'X-Client-API-Key': self.secret_key
+                },
+                method='GET'
+            )
+
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode('utf-8'))
+                    if data.get('has_command'):
+                        return data.get('command')
+                return None
+
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                print(f"Warning: Authentication failed - check secret_key configuration")
+            return None
+        except Exception as e:
+            # Silently fail - server might be temporarily unavailable
+            return None
+
+    def command_polling_worker(self):
+        """Background worker that polls for and executes commands"""
+        print(f"Command polling worker started (interval: {self.command_poll_interval}s)")
+
+        while self.command_polling_running:
+            try:
+                # Poll for command
+                command = self.poll_for_commands()
+
+                if command:
+                    # Verify signature before execution
+                    is_valid, error_msg = self.verify_command_signature(command)
+
+                    if is_valid:
+                        # Execute the command
+                        result = self.execute_command(command)
+
+                        # Submit result
+                        self.submit_command_result(result)
+
+                        print(f"[{datetime.now().strftime('%H:%M:%S')}] Command completed: exit_code={result['exit_code']}")
+                    else:
+                        print(f"[{datetime.now().strftime('%H:%M:%S')}] Command REJECTED: {error_msg}")
+                        # Submit rejection result
+                        self.submit_command_result({
+                            'command_uuid': command.get('command_uuid', 'unknown'),
+                            'command_id': command.get('command_id', 'unknown'),
+                            'exit_code': -1,
+                            'stdout': '',
+                            'stderr': f'Command rejected: {error_msg}',
+                            'executed_at': datetime.now().isoformat(),
+                            'duration_seconds': 0,
+                            'error': 'signature_verification_failed'
+                        })
+
+            except Exception as e:
+                print(f"Warning: Error in command polling: {e}")
+
+            time.sleep(self.command_poll_interval)
+
+    def start_command_polling(self):
+        """Start the command polling background thread"""
+        if not self.center_server_url:
+            print("No center server configured, command polling disabled")
+            return
+
+        if not self.secret_key:
+            print("No secret key configured, command polling disabled")
+            return
+
+        if not self.command_enabled:
+            print("Remote commands disabled in config")
+            return
+
+        if self.command_polling_running:
+            return
+
+        self.command_polling_running = True
+        self.command_polling_thread = threading.Thread(
+            target=self.command_polling_worker,
+            daemon=True
+        )
+        self.command_polling_thread.start()
+        print(f"Command polling started for client: {self.client_id}")
+
+    def stop_command_polling(self):
+        """Stop the command polling background thread"""
+        if self.command_polling_running:
+            self.command_polling_running = False
+            if self.command_polling_thread:
+                self.command_polling_thread.join(timeout=2)
+
     def run_continuous(self):
         """Run benchmark continuously at specified interval"""
         print(f"Starting continuous benchmarking...")
@@ -336,10 +607,17 @@ class PingBenchmark:
         print(f"Test interval: {self.test_interval} seconds")
         if self.center_server_url:
             print(f"Heartbeat interval: {self.heartbeat_interval} seconds")
+        if self.secret_key and self.command_enabled:
+            print(f"Remote commands: ENABLED (poll interval: {self.command_poll_interval}s)")
+        else:
+            print(f"Remote commands: DISABLED")
         print(f"Press Ctrl+C to stop\n")
 
         # Start heartbeat in background
         self.start_heartbeat()
+
+        # Start command polling in background
+        self.start_command_polling()
 
         try:
             while True:
@@ -348,6 +626,7 @@ class PingBenchmark:
                 time.sleep(self.test_interval)
         except KeyboardInterrupt:
             print("\n\nBenchmarking stopped by user")
+            self.stop_command_polling()
             self.stop_heartbeat()
 
 if __name__ == '__main__':
