@@ -9,6 +9,7 @@ A web-based dashboard for collecting and visualizing router benchmark logs from 
 - **Per-Client Filtering**: View data from specific client or all clients combined
 - **Real-time Visualization**: Interactive charts showing packet loss % and latency over time
 - **Remote Command Execution**: Send whitelisted commands to clients with mutual authentication
+- **Web Shell**: Real-time interactive terminal access to clients via WebSocket
 - **Admin Authentication**: API key-based admin access
 - **Audit Logging**: Complete audit trail of all command activity
 - **Docker Deployment**: Easy deployment using Docker Compose
@@ -67,9 +68,10 @@ Open your browser and navigate to:
 http://YOUR_SERVER_IP:5000
 ```
 
-The dashboard has two tabs:
+The dashboard has three tabs:
 - **Monitoring**: Charts, statistics, and client status
 - **Remote Commands**: Send commands and view results
+- **Web Shell**: Interactive terminal access to clients
 
 ## API Reference
 
@@ -380,6 +382,17 @@ Data is stored in the `/app/data/` directory:
 - **Send Command**: Select client, command, and parameters
 - **Command Results**: Table of recent results with "View" button for details
 
+### Web Shell Tab
+- **Client Selector**: Choose an online client to connect to
+- **Terminal**: Full xterm.js terminal emulator
+- **Features**:
+  - Real-time bidirectional communication via WebSocket
+  - PTY-based shell on the client (full terminal features)
+  - Terminal resize support
+  - Session timeout after 30 minutes of inactivity
+  - Maximum 3 concurrent sessions per client
+  - Use Ctrl+C to interrupt, Ctrl+D to close
+
 ---
 
 ## Managing the Server
@@ -445,3 +458,10 @@ The server listens on port 5000. Ensure:
 - Verify clients are sending data
 - Check server received data: `cat data/benchmark_data.jsonl`
 - Check browser console for errors
+
+### Web Shell not connecting
+- Verify client has `web_shell_enabled: true` in config.json
+- Check that the client is shown as "online" in the dashboard
+- Verify WebSocket connection in browser dev tools (Network tab)
+- Check server logs for shell-related errors
+- Ensure client has python-socketio installed

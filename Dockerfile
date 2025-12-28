@@ -10,7 +10,10 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages
-RUN pip3 install --no-cache-dir schedule
+# - schedule: for periodic tasks
+# - python-socketio[client]: for WebSocket shell communication
+# - websocket-client: WebSocket transport for socketio
+RUN pip3 install --no-cache-dir schedule "python-socketio[client]" websocket-client
 
 # Create app directory
 WORKDIR /app

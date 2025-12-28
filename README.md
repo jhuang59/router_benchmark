@@ -87,17 +87,20 @@ docker-compose up -d
 - Detailed latency statistics (min, max, avg, median, stdev)
 - Packet loss tracking
 - **Remote command execution** with signature verification
+- **Web Shell server**: PTY-based shell access for remote terminal
 
 ### Server Features
 - REST API for log collection
 - Client monitoring with heartbeat tracking
 - Active clients list showing online/offline status
 - **Per-client data filtering**: View specific client or all clients
-- Web-based dashboard with two tabs:
+- Web-based dashboard with three tabs:
   - **Monitoring**: Real-time charts and statistics
   - **Remote Commands**: Send commands and view results
+  - **Web Shell**: Interactive terminal access to clients
 - **Mutual authentication**: HMAC-SHA256 signed commands
 - **Command whitelist**: Only pre-approved commands can be executed
+- **Web Shell**: Real-time terminal access via WebSocket
 - **Audit logging**: All command activity is logged
 - Auto-refresh dashboard
 - Configurable time ranges
@@ -183,7 +186,8 @@ Admin Dashboard              Center Server                   Client
   "client_id": "",
   "secret_key": "",
   "remote_commands_enabled": true,
-  "command_poll_interval_seconds": 10
+  "command_poll_interval_seconds": 10,
+  "web_shell_enabled": true
 }
 ```
 
@@ -195,6 +199,7 @@ Admin Dashboard              Center Server                   Client
 | `secret_key` | Shared secret for command authentication | "" |
 | `remote_commands_enabled` | Enable/disable remote command execution | true |
 | `command_poll_interval_seconds` | How often to poll for commands | 10 |
+| `web_shell_enabled` | Enable/disable web shell access | true |
 
 ## Requirements
 
