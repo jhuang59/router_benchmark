@@ -89,11 +89,45 @@ Example response:
 }
 ```
 
-2. Deploy the client:
+2. Deploy the client using one of the options below:
+
+#### Option A: Native Deployment (Recommended for Web Shell)
+
+Run the client directly on the host system for full host access via Web Shell:
+
+```bash
+# Install dependencies
+pip3 install requests python-socketio websocket-client
+
+# Run the client
+python3 ping_benchmark.py
+```
+
+**Pros:**
+- Web Shell connects directly to host system
+- Full access to host filesystem, processes, and hardware
+- No container isolation overhead
+
+**Cons:**
+- Requires Python 3 and dependencies installed on host
+- Less isolated from host system
+
+#### Option B: Docker Deployment
+
+Run the client in a container for isolation:
 
 ```bash
 docker-compose up -d --build
 ```
+
+**Pros:**
+- Isolated environment
+- Easy deployment and updates
+- Consistent across different host systems
+
+**Cons:**
+- Web Shell connects to container environment, not host
+- Limited access to host resources
 
 ### Step 5: Access Dashboard
 
@@ -239,6 +273,10 @@ Open an interactive terminal session to remote clients:
 - 30-minute session timeout
 - Maximum 3 concurrent sessions per client
 
+**Important:** The Web Shell connects to the environment where the client agent runs:
+- **Native deployment**: Shell connects to the host system (full access)
+- **Docker deployment**: Shell connects to the container (limited to container environment)
+
 ---
 
 ## Architecture
@@ -328,6 +366,22 @@ Admin Dashboard              Center Server                   Client
 2. Verify `web_shell_enabled: true` in config.json
 3. Check client is online (green status)
 4. Check browser console for WebSocket errors
+
+### Web shell connects to container instead of host
+
+This is expected behavior when using Docker deployment. To access the host system:
+
+1. **Switch to native deployment** (recommended):
+   ```bash
+   # Stop Docker container
+   docker-compose down
+
+   # Run client natively
+   pip3 install requests python-socketio websocket-client
+   python3 ping_benchmark.py
+   ```
+
+2. The Web Shell will now connect directly to the host system
 
 ### Authentication errors
 
