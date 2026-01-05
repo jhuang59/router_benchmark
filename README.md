@@ -251,8 +251,8 @@ Execute pre-approved commands on remote clients:
 
 | Category | Commands |
 |----------|----------|
-| System | `system_info`, `hostname`, `uptime`, `disk_usage`, `memory_info`, `cpu_info`, `process_list`, `date_time` |
-| Network | `network_interfaces`, `routing_table`, `dns_config`, `network_stats`, `ping_test`, `traceroute`, `interface_stats`, `connection_count`, `arp_table` |
+| System | `system_info`, `hostname`, `uptime`, `disk_usage`, `memory_info`, `cpu_info`, `process_list`, `date_time`, `load_average`, `top_cpu`, `dmesg_errors`, `systemd_failed`, `disk_inodes` |
+| Network | `network_interfaces`, `routing_table`, `dns_config`, `network_stats`, `ping_test`, `traceroute`, `interface_stats`, `connection_count`, `arp_table`, `listening_ports` |
 | Docker | `docker_ps`, `docker_stats` |
 | Benchmark | `benchmark_status`, `benchmark_logs` |
 
@@ -276,6 +276,37 @@ Open an interactive terminal session to remote clients:
 **Important:** The Web Shell connects to the environment where the client agent runs:
 - **Native deployment**: Shell connects to the host system (full access)
 - **Docker deployment**: Shell connects to the container (limited to container environment)
+
+### Tab 4: AI Troubleshoot
+
+AI-powered diagnostics to automatically analyze edge device health:
+
+1. **Configure AI** (first time only):
+   - Enter your OpenAI or Anthropic API key in the configuration section
+   - Or set `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` environment variable
+
+2. **Select Target Client**: Choose an online client to diagnose
+
+3. **Select Categories**: Check which areas to analyze:
+   - System (CPU, memory, processes, services)
+   - Disk (usage, inodes)
+   - Network (interfaces, routes, connections)
+   - Docker (container status)
+   - Benchmark (client status)
+
+4. **Optional Question**: Ask a specific question like "Why is CPU usage high?"
+
+5. **Run Diagnosis**: Click the button to:
+   - Automatically collect diagnostic data from the client
+   - Send data to AI for analysis
+   - Receive structured recommendations
+
+**AI Diagnosis Output:**
+- Health Summary (HEALTHY, WARNING, or CRITICAL)
+- Issues Found with severity indicators
+- Root Cause Analysis
+- Actionable Recommendations
+- Ready-to-run fix commands
 
 ---
 
@@ -307,6 +338,7 @@ Open an interactive terminal session to remote clients:
                     │  • Monitoring           │
                     │  • Remote Commands      │
                     │  • Web Shell            │
+                    │  • AI Troubleshoot      │
                     └─────────────────────────┘
 ```
 

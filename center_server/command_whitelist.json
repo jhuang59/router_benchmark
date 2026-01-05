@@ -180,6 +180,48 @@
       "category": "network",
       "params": [],
       "timeout": 10
+    },
+    "dmesg_errors": {
+      "cmd": "dmesg --level=err,warn | tail -50",
+      "description": "Show recent kernel errors and warnings",
+      "category": "system",
+      "params": [],
+      "timeout": 15
+    },
+    "systemd_failed": {
+      "cmd": "systemctl list-units --state=failed --no-pager",
+      "description": "List failed systemd services",
+      "category": "system",
+      "params": [],
+      "timeout": 15
+    },
+    "load_average": {
+      "cmd": "cat /proc/loadavg && echo '---' && uptime",
+      "description": "Show system load average",
+      "category": "system",
+      "params": [],
+      "timeout": 5
+    },
+    "top_cpu": {
+      "cmd": "ps aux --sort=-%cpu | head -15",
+      "description": "Show top 15 processes by CPU usage",
+      "category": "system",
+      "params": [],
+      "timeout": 15
+    },
+    "listening_ports": {
+      "cmd": "ss -tlnp",
+      "description": "Show listening TCP ports",
+      "category": "network",
+      "params": [],
+      "timeout": 10
+    },
+    "disk_inodes": {
+      "cmd": "df -i",
+      "description": "Show inode usage",
+      "category": "system",
+      "params": [],
+      "timeout": 10
     }
   }
 }

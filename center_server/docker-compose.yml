@@ -11,6 +11,12 @@ services:
     restart: unless-stopped
     environment:
       - TZ=UTC
+      # AI Troubleshooting Configuration (optional)
+      # Set these to enable AI-powered diagnostics
+      # - AI_PROVIDER=openai          # or 'anthropic'
+      # - OPENAI_API_KEY=sk-...       # Required if AI_PROVIDER=openai
+      # - ANTHROPIC_API_KEY=sk-ant-...# Required if AI_PROVIDER=anthropic
+      # - AI_MODEL=gpt-4o             # Optional: override default model
     logging:
       driver: "json-file"
       options:

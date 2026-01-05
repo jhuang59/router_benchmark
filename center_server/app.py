@@ -18,6 +18,7 @@ from pathlib import Path
 import auth
 import commands
 from shell_manager import shell_manager
+from ai_diagnostics import get_troubleshooter, configure_troubleshooter
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'router-benchmark-secret-key')
@@ -948,6 +949,298 @@ def get_shell_clients():
             'total': len(clients)
         })
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# AI Troubleshooting Endpoints
+# ============================================================================
+
+@app.route('/api/ai/config', methods=['GET'])
+def get_ai_config():
+    """Get AI troubleshooting configuration status"""
+    try:
+        troubleshooter = get_troubleshooter()
+        return jsonify(troubleshooter.get_config_status())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/ai/config', methods=['POST'])
+@require_admin_auth
+def set_ai_config():
+    """
+    Configure AI troubleshooting provider
+    POST body: {
+        "provider": "openai" or "anthropic",
+        "api_key": "...",
+        "model": "..." (optional)
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body required'}), 400
+
+        provider = data.get('provider', 'openai')
+        api_key = data.get('api_key')
+        model = data.get('model')
+
+        if not api_key:
+            return jsonify({'error': 'api_key is required'}), 400
+
+        troubleshooter = configure_troubleshooter(provider, api_key, model)
+
+        return jsonify({
+            'status': 'success',
+            'config': troubleshooter.get_config_status()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/ai/categories', methods=['GET'])
+def get_ai_categories():
+    """Get available diagnostic categories"""
+    try:
+        troubleshooter = get_troubleshooter()
+        return jsonify({
+            'categories': troubleshooter.get_diagnostic_categories()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/ai/diagnose', methods=['POST'])
+@require_admin_auth
+def start_ai_diagnosis():
+    """
+    Start an AI diagnostic session for a client.
+    This queues the necessary diagnostic commands and creates a session.
+
+    POST body: {
+        "client_id": "target-client",
+        "categories": ["system", "disk", "network"],  # optional, defaults to all
+        "question": "Optional specific question"  # optional
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data or 'client_id' not in data:
+            return jsonify({'error': 'client_id is required'}), 400
+
+        client_id = data['client_id']
+        categories = data.get('categories', ['system', 'disk', 'network'])
+        question = data.get('question')
+
+        troubleshooter = get_troubleshooter()
+
+        # Check if AI is configured
+        if not troubleshooter.is_configured():
+            return jsonify({
+                'error': 'AI not configured. Configure via /api/ai/config or set environment variables.',
+                'config': troubleshooter.get_config_status()
+            }), 400
+
+        # Create diagnostic session
+        session = troubleshooter.create_session(client_id, categories)
+
+        # Get commands needed for the categories
+        required_commands = troubleshooter.get_commands_for_categories(categories)
+
+        # Get admin info
+        api_key = request.headers.get('X-Admin-API-Key')
+        admin_secrets = auth.load_admin_secrets()
+        admin_name = admin_secrets.get(api_key, {}).get('name', 'unknown')
+
+        # Queue all diagnostic commands
+        queued_commands = []
+        for cmd_id in required_commands:
+            try:
+                cmd = commands.queue_command(client_id, cmd_id, {}, admin_name)
+                if cmd:
+                    queued_commands.append({
+                        'command_id': cmd_id,
+                        'command_uuid': cmd['command_uuid']
+                    })
+            except Exception as e:
+                print(f"Failed to queue command {cmd_id}: {e}")
+
+        session.status = 'collecting'
+
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] AI diagnosis started for: {client_id}")
+
+        return jsonify({
+            'status': 'success',
+            'session_id': session.session_id,
+            'client_id': client_id,
+            'categories': categories,
+            'commands_queued': queued_commands,
+            'question': question,
+            'message': 'Diagnostic commands queued. Poll /api/ai/diagnose/<session_id> for results.'
+        }), 201
+
+    except Exception as e:
+        print(f"Error starting AI diagnosis: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/ai/diagnose/<session_id>', methods=['GET'])
+@require_admin_auth
+def get_ai_diagnosis_status(session_id):
+    """Get the status/results of a diagnostic session"""
+    try:
+        troubleshooter = get_troubleshooter()
+        session = troubleshooter.get_session(session_id)
+
+        if not session:
+            return jsonify({'error': 'Session not found'}), 404
+
+        return jsonify({
+            'session_id': session.session_id,
+            'client_id': session.client_id,
+            'status': session.status,
+            'categories': session.categories,
+            'created_at': session.created_at,
+            'data_collected': list(session.diagnostic_data.keys()),
+            'diagnosis': session.diagnosis,
+            'error': session.error
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/ai/diagnose/<session_id>/data', methods=['POST'])
+@require_admin_auth
+def update_ai_diagnosis_data(session_id):
+    """
+    Update diagnostic session with command results.
+    Called after command results are received.
+
+    POST body: {
+        "command_id": "system_info",
+        "result": {
+            "stdout": "...",
+            "stderr": "...",
+            "exit_code": 0
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body required'}), 400
+
+        command_id = data.get('command_id')
+        result = data.get('result', {})
+
+        if not command_id:
+            return jsonify({'error': 'command_id is required'}), 400
+
+        troubleshooter = get_troubleshooter()
+        success = troubleshooter.update_session_data(session_id, command_id, result)
+
+        if not success:
+            return jsonify({'error': 'Session not found'}), 404
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Data for {command_id} added to session'
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/ai/diagnose/<session_id>/analyze', methods=['POST'])
+@require_admin_auth
+def run_ai_analysis(session_id):
+    """
+    Run AI analysis on collected diagnostic data.
+
+    POST body: {
+        "question": "Optional specific question"  # optional
+    }
+    """
+    try:
+        data = request.get_json() or {}
+        question = data.get('question')
+
+        troubleshooter = get_troubleshooter()
+        result = troubleshooter.analyze(session_id, question)
+
+        if 'error' in result:
+            return jsonify(result), 400
+
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] AI analysis completed for session: {session_id[:8]}...")
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/ai/quick-diagnose', methods=['POST'])
+@require_admin_auth
+def quick_ai_diagnosis():
+    """
+    Quick one-shot diagnosis using existing command results.
+    Collects latest results and runs AI analysis immediately.
+
+    POST body: {
+        "client_id": "target-client",
+        "question": "Optional specific question"
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data or 'client_id' not in data:
+            return jsonify({'error': 'client_id is required'}), 400
+
+        client_id = data['client_id']
+        question = data.get('question')
+
+        troubleshooter = get_troubleshooter()
+
+        if not troubleshooter.is_configured():
+            return jsonify({
+                'error': 'AI not configured. Configure via /api/ai/config or set environment variables.'
+            }), 400
+
+        # Get recent command results for this client
+        recent_results = commands.get_command_results(client_id, limit=50)
+
+        if not recent_results:
+            return jsonify({
+                'error': 'No recent command results found for this client. Run some diagnostic commands first.'
+            }), 400
+
+        # Build diagnostic data from recent results
+        diagnostic_data = {}
+        for result in recent_results:
+            cmd_id = result.get('command_id')
+            if cmd_id:
+                diagnostic_data[cmd_id] = {
+                    'stdout': result.get('stdout', ''),
+                    'stderr': result.get('stderr', ''),
+                    'exit_code': result.get('exit_code'),
+                    'executed_at': result.get('executed_at')
+                }
+
+        # Add question to the diagnostic data if provided
+        result = troubleshooter.quick_analyze(diagnostic_data, client_id)
+
+        if question and result.get('status') == 'completed':
+            # Re-run with the question
+            result = troubleshooter.quick_analyze(diagnostic_data, client_id)
+
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Quick AI diagnosis for: {client_id}")
+
+        return jsonify(result)
+
+    except Exception as e:
+        print(f"Error in quick diagnosis: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 

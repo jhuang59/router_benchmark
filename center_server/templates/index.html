@@ -597,6 +597,223 @@
         .shell-info li {
             margin-bottom: 5px;
         }
+
+        /* AI Troubleshoot Styles */
+        .ai-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            min-height: 600px;
+        }
+
+        .ai-sidebar {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .ai-sidebar h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .ai-sidebar .form-group {
+            margin-bottom: 15px;
+        }
+
+        .ai-category-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ai-category-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-category-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .ai-category-item label {
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+        }
+
+        .ai-main {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .ai-status-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .ai-status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        .ai-status-indicator.not-configured {
+            background: #f59e0b;
+        }
+
+        .ai-status-indicator.error {
+            background: #ef4444;
+        }
+
+        .ai-result-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .ai-result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .ai-result-content {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .ai-result-content h2 {
+            color: #333;
+            font-size: 18px;
+            margin: 20px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #3b82f6;
+        }
+
+        .ai-result-content h2:first-child {
+            margin-top: 0;
+        }
+
+        .ai-result-content ul, .ai-result-content ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .ai-result-content li {
+            margin-bottom: 8px;
+        }
+
+        .ai-result-content code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .ai-result-content pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 13px;
+            margin: 10px 0;
+        }
+
+        .ai-result-content pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        .ai-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            min-height: 400px;
+            color: #666;
+            text-align: center;
+        }
+
+        .ai-placeholder svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            fill: #9ca3af;
+        }
+
+        .ai-placeholder h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .ai-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .ai-loading .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .ai-config-form {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .ai-config-form .form-group {
+            margin-bottom: 12px;
+        }
+
+        .ai-config-form .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .ai-question-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -608,6 +825,7 @@
             <button class="tab active" onclick="switchTab('monitoring')">Monitoring</button>
             <button class="tab" onclick="switchTab('commands')">Remote Commands</button>
             <button class="tab" onclick="switchTab('shell')">Web Shell</button>
+            <button class="tab" onclick="switchTab('ai')">AI Troubleshoot</button>
         </div>
 
         <!-- Toast Container -->
@@ -783,6 +1001,113 @@
                 </div>
             </div>
         </div>
+
+        <!-- AI Troubleshoot Tab -->
+        <div id="ai-tab" class="tab-content">
+            <!-- AI Info -->
+            <div class="shell-info" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                <h4 style="color: white;">AI-Powered Diagnostics</h4>
+                <ul style="color: rgba(255,255,255,0.9);">
+                    <li>Automatically collect system metrics from edge devices</li>
+                    <li>AI analyzes data to identify issues and recommend solutions</li>
+                    <li>Supports network, CPU, memory, disk, and service diagnostics</li>
+                    <li>Requires OpenAI or Anthropic API key for AI analysis</li>
+                </ul>
+            </div>
+
+            <div class="ai-container">
+                <!-- Sidebar Controls -->
+                <div class="ai-sidebar">
+                    <h3>Diagnostics</h3>
+
+                    <div class="form-group">
+                        <label for="aiClient"><strong>Target Client</strong></label>
+                        <select id="aiClient" style="width: 100%; padding: 10px; margin-top: 5px;">
+                            <option value="">Select a client...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label><strong>Categories</strong></label>
+                        <div class="ai-category-list" id="aiCategoryList">
+                            <div class="ai-category-item">
+                                <input type="checkbox" id="cat_system" value="system" checked>
+                                <label for="cat_system">System (CPU, Memory, Processes)</label>
+                            </div>
+                            <div class="ai-category-item">
+                                <input type="checkbox" id="cat_disk" value="disk" checked>
+                                <label for="cat_disk">Disk Usage</label>
+                            </div>
+                            <div class="ai-category-item">
+                                <input type="checkbox" id="cat_network" value="network" checked>
+                                <label for="cat_network">Network</label>
+                            </div>
+                            <div class="ai-category-item">
+                                <input type="checkbox" id="cat_docker" value="docker">
+                                <label for="cat_docker">Docker Containers</label>
+                            </div>
+                            <div class="ai-category-item">
+                                <input type="checkbox" id="cat_benchmark" value="benchmark">
+                                <label for="cat_benchmark">Benchmark Status</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="aiQuestion"><strong>Specific Question (Optional)</strong></label>
+                        <textarea id="aiQuestion" class="ai-question-input" rows="3" placeholder="e.g., Why is the CPU usage high?"></textarea>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="runAIDiagnosis()" id="runDiagnosisBtn" style="width: 100%; padding: 12px; margin-top: 10px;">
+                        Run Diagnosis
+                    </button>
+
+                    <button class="btn btn-secondary" onclick="refreshAIClients()" style="width: 100%; padding: 10px; margin-top: 10px;">
+                        Refresh Clients
+                    </button>
+
+                    <!-- AI Configuration -->
+                    <div class="ai-config-form" id="aiConfigForm">
+                        <h4 style="margin-bottom: 10px; font-size: 14px;">AI Configuration</h4>
+                        <div class="form-group">
+                            <label for="aiProvider" style="font-size: 12px;">Provider</label>
+                            <select id="aiProvider" style="width: 100%; padding: 8px;">
+                                <option value="openai">OpenAI (GPT-4)</option>
+                                <option value="anthropic">Anthropic (Claude)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="aiApiKey" style="font-size: 12px;">API Key</label>
+                            <input type="password" id="aiApiKey" placeholder="Enter API key..." style="width: 100%; padding: 8px;">
+                        </div>
+                        <button class="btn btn-success" onclick="saveAIConfig()" style="width: 100%; padding: 8px; font-size: 12px;">
+                            Save Configuration
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="ai-main">
+                    <!-- Status Bar -->
+                    <div class="ai-status-card">
+                        <div class="ai-status-indicator" id="aiStatusIndicator"></div>
+                        <span id="aiStatusText">Checking AI configuration...</span>
+                    </div>
+
+                    <!-- Results Container -->
+                    <div class="ai-result-container" id="aiResultContainer">
+                        <div class="ai-placeholder" id="aiPlaceholder">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                            <h3>Ready for Diagnosis</h3>
+                            <p>Select a client and click "Run Diagnosis" to analyze system health</p>
+                            <p style="font-size: 12px; margin-top: 10px; color: #999;">
+                                The AI will collect system metrics and provide actionable recommendations
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -815,6 +1140,10 @@
             } else if (tabName === 'shell') {
                 initShellTerminal();
                 refreshShellClients();
+            } else if (tabName === 'ai') {
+                loadAdminKey();
+                refreshAIClients();
+                checkAIConfig();
             }
         }
 
@@ -1703,6 +2032,328 @@
 
             indicator.className = 'shell-status-indicator ' + status;
             statusText.textContent = text;
+        }
+
+        // ========================================
+        // AI Troubleshooting
+        // ========================================
+        let aiConfigured = false;
+
+        async function checkAIConfig() {
+            try {
+                const response = await fetch('/api/ai/config');
+                const config = await response.json();
+
+                aiConfigured = config.configured;
+                updateAIStatus(config);
+
+            } catch (error) {
+                console.error('Error checking AI config:', error);
+                updateAIStatus({ configured: false, error: 'Failed to check configuration' });
+            }
+        }
+
+        function updateAIStatus(config) {
+            const indicator = document.getElementById('aiStatusIndicator');
+            const statusText = document.getElementById('aiStatusText');
+
+            if (config.configured) {
+                indicator.className = 'ai-status-indicator';
+                statusText.textContent = `AI Ready: ${config.provider} (${config.model})`;
+                document.getElementById('runDiagnosisBtn').disabled = false;
+            } else {
+                indicator.className = 'ai-status-indicator not-configured';
+                statusText.textContent = 'AI not configured - Enter API key below';
+                document.getElementById('runDiagnosisBtn').disabled = true;
+            }
+        }
+
+        async function saveAIConfig() {
+            const provider = document.getElementById('aiProvider').value;
+            const apiKey = document.getElementById('aiApiKey').value;
+
+            if (!apiKey) {
+                showToast('Please enter an API key', 'error');
+                return;
+            }
+
+            if (!adminApiKey) {
+                showToast('Please save Admin API Key in Remote Commands tab first', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/ai/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-API-Key': adminApiKey
+                    },
+                    body: JSON.stringify({ provider, api_key: apiKey })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast('AI configuration saved', 'success');
+                    document.getElementById('aiApiKey').value = '';
+                    checkAIConfig();
+                } else {
+                    showToast(`Error: ${result.error}`, 'error');
+                }
+
+            } catch (error) {
+                console.error('Error saving AI config:', error);
+                showToast('Failed to save AI configuration', 'error');
+            }
+        }
+
+        async function refreshAIClients() {
+            try {
+                const response = await fetch('/api/clients');
+                const result = await response.json();
+
+                const select = document.getElementById('aiClient');
+                const currentValue = select.value;
+                select.innerHTML = '<option value="">Select a client...</option>';
+
+                if (result.clients) {
+                    result.clients.forEach(client => {
+                        const option = document.createElement('option');
+                        option.value = client.client_id;
+                        const status = client.status === 'online' ? '🟢' : '🔴';
+                        option.textContent = `${status} ${client.client_id} (${client.hostname})`;
+                        select.appendChild(option);
+                    });
+                }
+
+                if (currentValue) select.value = currentValue;
+
+            } catch (error) {
+                console.error('Error loading AI clients:', error);
+            }
+        }
+
+        function getSelectedCategories() {
+            const categories = [];
+            document.querySelectorAll('#aiCategoryList input[type="checkbox"]:checked').forEach(cb => {
+                categories.push(cb.value);
+            });
+            return categories;
+        }
+
+        async function runAIDiagnosis() {
+            const clientId = document.getElementById('aiClient').value;
+            const categories = getSelectedCategories();
+            const question = document.getElementById('aiQuestion').value.trim();
+
+            if (!clientId) {
+                showToast('Please select a target client', 'error');
+                return;
+            }
+
+            if (categories.length === 0) {
+                showToast('Please select at least one diagnostic category', 'error');
+                return;
+            }
+
+            if (!adminApiKey) {
+                showToast('Please save Admin API Key in Remote Commands tab first', 'error');
+                return;
+            }
+
+            // Show loading state
+            const container = document.getElementById('aiResultContainer');
+            container.innerHTML = `
+                <div class="ai-loading">
+                    <div class="spinner"></div>
+                    <p>Collecting diagnostic data from ${clientId}...</p>
+                    <p style="font-size: 12px; color: #666;">This may take 30-60 seconds</p>
+                </div>
+            `;
+
+            document.getElementById('runDiagnosisBtn').disabled = true;
+
+            try {
+                // Step 1: Start diagnosis and queue commands
+                const startResponse = await fetch('/api/ai/diagnose', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-API-Key': adminApiKey
+                    },
+                    body: JSON.stringify({
+                        client_id: clientId,
+                        categories: categories,
+                        question: question || null
+                    })
+                });
+
+                const startResult = await startResponse.json();
+
+                if (!startResponse.ok) {
+                    throw new Error(startResult.error || 'Failed to start diagnosis');
+                }
+
+                const sessionId = startResult.session_id;
+                const commandsQueued = startResult.commands_queued;
+
+                container.innerHTML = `
+                    <div class="ai-loading">
+                        <div class="spinner"></div>
+                        <p>Waiting for ${commandsQueued.length} diagnostic commands to complete...</p>
+                        <p style="font-size: 12px; color: #666;">Commands: ${commandsQueued.map(c => c.command_id).join(', ')}</p>
+                    </div>
+                `;
+
+                // Step 2: Wait for commands to complete and collect results
+                await waitForDiagnosticResults(sessionId, commandsQueued, clientId);
+
+                // Step 3: Run AI analysis
+                container.innerHTML = `
+                    <div class="ai-loading">
+                        <div class="spinner"></div>
+                        <p>AI is analyzing the diagnostic data...</p>
+                        <p style="font-size: 12px; color: #666;">Generating recommendations</p>
+                    </div>
+                `;
+
+                const analyzeResponse = await fetch(`/api/ai/diagnose/${sessionId}/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-API-Key': adminApiKey
+                    },
+                    body: JSON.stringify({ question: question || null })
+                });
+
+                const analyzeResult = await analyzeResponse.json();
+
+                if (!analyzeResponse.ok) {
+                    throw new Error(analyzeResult.error || 'Failed to analyze data');
+                }
+
+                // Display results
+                displayAIDiagnosis(analyzeResult);
+
+            } catch (error) {
+                console.error('Error running AI diagnosis:', error);
+                container.innerHTML = `
+                    <div class="ai-placeholder">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill: #ef4444;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                        <h3>Diagnosis Failed</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                document.getElementById('runDiagnosisBtn').disabled = false;
+            }
+        }
+
+        async function waitForDiagnosticResults(sessionId, commandsQueued, clientId) {
+            // Poll for command results for up to 60 seconds
+            const maxWaitTime = 60000;
+            const pollInterval = 3000;
+            const startTime = Date.now();
+
+            while (Date.now() - startTime < maxWaitTime) {
+                // Get recent command results
+                const resultsResponse = await fetch(`/api/commands/results?client_id=${clientId}&limit=50`, {
+                    headers: { 'X-Admin-API-Key': adminApiKey }
+                });
+
+                const resultsData = await resultsResponse.json();
+                const recentResults = resultsData.results || [];
+
+                // Check which commands have completed
+                let completedCount = 0;
+                for (const cmd of commandsQueued) {
+                    const result = recentResults.find(r => r.command_uuid === cmd.command_uuid);
+                    if (result) {
+                        completedCount++;
+                        // Update session with this result
+                        await fetch(`/api/ai/diagnose/${sessionId}/data`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Admin-API-Key': adminApiKey
+                            },
+                            body: JSON.stringify({
+                                command_id: cmd.command_id,
+                                result: {
+                                    stdout: result.stdout,
+                                    stderr: result.stderr,
+                                    exit_code: result.exit_code,
+                                    executed_at: result.executed_at
+                                }
+                            })
+                        });
+                    }
+                }
+
+                // If at least some commands completed, we can proceed
+                if (completedCount >= Math.min(3, commandsQueued.length)) {
+                    return;
+                }
+
+                // Wait before next poll
+                await new Promise(resolve => setTimeout(resolve, pollInterval));
+            }
+
+            // Timeout - proceed with whatever data we have
+            console.log('Diagnosis timeout - proceeding with partial data');
+        }
+
+        function displayAIDiagnosis(result) {
+            const container = document.getElementById('aiResultContainer');
+
+            // Convert markdown to HTML (basic conversion)
+            let html = result.diagnosis || 'No diagnosis available';
+
+            // Convert headers
+            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+
+            // Convert code blocks
+            html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+
+            // Convert inline code
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+            // Convert bold
+            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+            // Convert lists
+            html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+            html = html.replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>');
+
+            // Wrap consecutive li elements in ul/ol
+            html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+
+            // Convert line breaks
+            html = html.replace(/\n\n/g, '</p><p>');
+            html = '<p>' + html + '</p>';
+
+            // Clean up
+            html = html.replace(/<p><\/p>/g, '');
+            html = html.replace(/<p>(<h[23]>)/g, '$1');
+            html = html.replace(/(<\/h[23]>)<\/p>/g, '$1');
+            html = html.replace(/<p>(<ul>)/g, '$1');
+            html = html.replace(/(<\/ul>)<\/p>/g, '$1');
+            html = html.replace(/<p>(<pre>)/g, '$1');
+            html = html.replace(/(<\/pre>)<\/p>/g, '$1');
+
+            container.innerHTML = `
+                <div class="ai-result-header">
+                    <h3>Diagnosis Results - ${result.client_id}</h3>
+                    <span style="color: #666; font-size: 12px;">
+                        Categories: ${(result.categories_analyzed || []).join(', ')}
+                    </span>
+                </div>
+                <div class="ai-result-content">
+                    ${html}
+                </div>
+            `;
         }
 
         // ========================================
