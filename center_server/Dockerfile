@@ -12,6 +12,7 @@ COPY app.py /app/
 COPY auth.py /app/
 COPY commands.py /app/
 COPY shell_manager.py /app/
+COPY ai_diagnostics.py /app/
 COPY command_whitelist.json /app/
 COPY templates /app/templates/
 
